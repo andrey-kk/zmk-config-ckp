@@ -5,3 +5,7 @@
 include:
   - board: bt60@2.0.0//zmk
     artifact-name: bt60
+  # Recovery firmware: flash to wipe stored BT pairings/settings, then flash bt60.uf2 again.
+  - board: bt60@2.0.0//zmk
+    shield: settings_reset
+    artifact-name: bt60-settings-reset
