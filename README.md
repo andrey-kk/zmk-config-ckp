@@ -15,5 +15,100 @@ After editing the keymap file upload it to the original folder using the "Add fi
  # More advanced
  If you want to exercise greater control over your BT60 and have a unique layout implemented you will need to change the matrix transform. The following diagram displays which keys connect to which row and column pins. Note that everything is zero indexed in the matrix transform
  	![alt text](rowcolmap.png)
-  The matrix transform can be found in bt60.dts, more information on how to do the matrix transforms can be found in the official ZMK documentation [here](https://zmkfirmware.dev/docs/development/new-shield#optional-matrix-transform)
+  The matrix transform for this PCB lives in ZMK itself (`app/boards/polarityworks/bt60/bt60_nrf52840_zmk_2_0_0.overlay`); to override it, redefine it in `bt60.keymap`. more information on how to do the matrix transforms can be found in the official ZMK documentation [here](https://zmkfirmware.dev/docs/development/new-shield#optional-matrix-transform)
   We're always willing to accept pull requests if you've developed your own layouts :)
+
+# This fork: what's configured and where
+
+Firmware is built from **ZMK `main` (Zephyr 4.1)** using ZMK's own in-tree board
+`bt60@2.0.0//zmk` (the BT60 CKP PCB). The old custom board files in
+`config/boards/` were removed: ZMK now ships an identical board definition
+(same matrix pins, LEDs, battery and ANSI matrix transform).
+
+| File | Purpose |
+|---|---|
+| `build.yaml` | Build target (`bt60@2.0.0//zmk`), firmware artifact named `bt60.uf2` |
+| `.github/workflows/build.yml` | Uses ZMK's standard `build-user-config` workflow |
+| `config/west.yml` | ZMK version (tracks `main`) |
+| `config/bt60.conf` | Kconfig: BLE, sleep/idle, lighting defaults, encoder driver off |
+| `config/bt60.keymap` | Keymap, mod-tap tuning, encoders disabled |
+
+## Layers
+
+| Layer | How to reach it |
+|---|---|
+| 0 Default | — |
+| 1 Raise | hold **Fn** |
+| 2 Lower | hold **Fn**, then hold **Esc** |
+
+The bottom row is in Mac order: **Ctrl, Option (Alt), Command (GUI)**.
+
+## Lighting and output keys
+
+New keys were only placed on positions that were previously empty (`&trans`)
+on their layer, so no existing shortcut was replaced.
+
+| Keys | Action |
+|---|---|
+| Fn + R | RGB underglow on/off |
+| Fn + T | RGB effect (cycle) |
+| Fn + Y | RGB hue + |
+| Fn + U / Fn + O | RGB brightness + / − |
+| Fn + J | Backlight on/off |
+| Fn + K / Fn + L | Backlight − / + |
+| Fn + Esc + U | Output → **U**SB |
+| Fn + Esc + B | Output → **B**luetooth |
+| Fn + Esc + ↓ (Menu key) | Toggle output USB ↔ Bluetooth |
+| Fn + Esc + Tab/Caps/Shift/Ctrl | Select BT profile 0/1/2/3 (unchanged) |
+| Fn + Esc + ← / → | Previous / next BT profile (unchanged) |
+| Fn + Esc + R | Clear current BT profile (unchanged) |
+
+Note: output selection only matters while USB is plugged in. Without USB the
+keyboard always uses Bluetooth. By default ZMK prefers USB when connected.
+
+## Mod-tap keys (right side of bottom rows)
+
+`Right Shift / ↑`, `Right Alt / ←`, `Menu / ↓`, `Right Ctrl / →` are mod-taps
+(set in `config/bt60.keymap`, `&mt { ... }`):
+
+- **tap** → arrow key
+- **hold > 200 ms** (`tapping-term-ms`) → modifier
+- **tap, then press and hold again within 175 ms** (`quick-tap-ms`) → the
+  arrow key auto-repeats instead of becoming a modifier.
+
+On the Fn layer these positions are plain arrows, so **Fn + arrow** also
+auto-repeats.
+
+## Power saving (`config/bt60.conf`)
+
+| Setting | Effect |
+|---|---|
+| `CONFIG_ZMK_IDLE_TIMEOUT=30000` | Keyboard is "idle" after 30 s without input |
+| `CONFIG_ZMK_RGB_UNDERGLOW_AUTO_OFF_IDLE=y` | Underglow switches off while idle, back on at the next keypress |
+| `CONFIG_ZMK_BACKLIGHT_AUTO_OFF_IDLE=y` | Same for the backlight |
+| `CONFIG_ZMK_SLEEP=y`, `CONFIG_ZMK_IDLE_SLEEP_TIMEOUT=900000` | Deep sleep after 15 min; any key wakes it (that keypress is not sent), then BLE reconnects |
+| `CONFIG_ZMK_RGB_UNDERGLOW_ON_START=n` | Underglow is no longer forced on at every boot (the last on/off state is restored) |
+| `CONFIG_ZMK_BACKLIGHT_BRT_START/STEP=10` | Backlight starts at 10 %, 10 % per step |
+| `CONFIG_ZMK_BLE_EXPERIMENTAL_CONN=y` | BLE connection-stability tweaks (from upstream) |
+
+None of these change key behaviour. Idle and sleep only react to time without
+keypresses. Lighting toggled off by hand stays off after idle.
+
+## Rotary encoders
+
+No encoders are fitted. `encoder_1..3` and the keymap `sensors` node are
+disabled at the top of `config/bt60.keymap`, and `CONFIG_EC11=n` in
+`config/bt60.conf`. The build prints a harmless Kconfig warning about
+`EC11_TRIGGER_GLOBAL_THREAD` (set by ZMK's board defaults, unused once the
+driver is off). To use an encoder again, delete those lines and add
+`sensor-bindings = <&inc_dec_kp C_VOL_UP C_VOL_DN>;` to each layer.
+
+## Building
+
+Push to GitHub (or run the **Build** action manually) and download `bt60.uf2`
+from the run's artifacts. Locally:
+
+```bash
+west init -l config && west update && west zephyr-export
+west build -s zmk/app -b "bt60@2.0.0//zmk" -- -DZMK_CONFIG="$PWD/config"
+```

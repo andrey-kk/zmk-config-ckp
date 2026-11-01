@@ -1,0 +1,7 @@
+# GitHub Actions build matrix for ZMK's reusable "build-user-config" workflow.
+# `bt60@2.0.0//zmk` = ZMK's in-tree Polarity Works BT60 board, revision 2.0.0
+# (the CKP PCB), ZMK variant. Firmware is uploaded as `bt60.uf2`.
+---
+include:
+  - board: bt60@2.0.0//zmk
+    artifact-name: bt60
