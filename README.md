@@ -90,6 +90,7 @@ auto-repeats.
 | `CONFIG_ZMK_RGB_UNDERGLOW_ON_START=n` | Underglow is no longer forced on at every boot (the last on/off state is restored) |
 | `CONFIG_ZMK_BACKLIGHT_BRT_START/STEP=10` | Backlight starts at 10 %, 10 % per step |
 | `CONFIG_ZMK_BLE_EXPERIMENTAL_CONN=y` | BLE connection-stability tweaks (from upstream) |
+| `CONFIG_ZMK_BLE_EXPERIMENTAL_SEC=y` | Lets macOS re-pair when stale pairing keys exist (fixes "Connect does nothing") |
 
 None of these change key behaviour. Idle and sleep only react to time without
 keypresses. Lighting toggled off by hand stays off after idle.
