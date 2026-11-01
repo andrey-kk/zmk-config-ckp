@@ -91,6 +91,7 @@ auto-repeats.
 | `CONFIG_ZMK_BACKLIGHT_BRT_START/STEP=10` | Backlight starts at 10 %, 10 % per step |
 | `CONFIG_ZMK_BLE_EXPERIMENTAL_CONN=y` | BLE connection-stability tweaks (from upstream) |
 | `CONFIG_ZMK_BLE_EXPERIMENTAL_SEC=y` | Lets macOS re-pair when stale pairing keys exist (fixes "Connect does nothing") |
+| `CONFIG_ZMK_BLE_PASSKEY_ENTRY=n` | Normal "just connect" pairing (EXPERIMENTAL_SEC would otherwise require typing a 6-digit code on the keyboard) |
 
 None of these change key behaviour. Idle and sleep only react to time without
 keypresses. Lighting toggled off by hand stays off after idle.
@@ -113,3 +114,22 @@ from the run's artifacts. Locally:
 west init -l config && west update && west zephyr-export
 west build -s zmk/app -b "bt60@2.0.0//zmk" -- -DZMK_CONFIG="$PWD/config"
 ```
+
+## Flashing and recovery
+
+1. Plug in USB, press **Fn + Enter** (or double-tap the reset button quickly).
+   A drive appears (e.g. `CKP`); allow the accessory if macOS asks.
+2. Copy the firmware onto it. On recent macOS, Terminal may need `sudo`:
+   `sudo cp -X bt60.uf2 /Volumes/CKP/` (use the name shown by `ls /Volumes`).
+   An error at the end of the copy is normal: the keyboard reboots.
+
+**Bluetooth won't pair / Connect does nothing:**
+
+1. Mac: Bluetooth settings → BT60 → ⓘ → Forget This Device.
+2. Flash `bt60-settings-reset.uf2` (also built by CI). It has no keys and no Bluetooth.
+3. Double-tap reset, flash `bt60.uf2` again.
+4. Unplug USB and click Connect on the Mac.
+
+Note: `/Volumes/CKP` can linger as an empty folder after the keyboard
+reboots. Check `diskutil list external` to see whether the drive is really mounted.
+
